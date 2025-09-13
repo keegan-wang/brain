@@ -1,0 +1,59 @@
+# Virtual environments & env files
+.venv/
+venv/
+.env
+.env.*
+.envrc
+
+# Python caches & artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dylib
+*.egg-info/
+.eggs/
+dist/
+build/
+site/
+
+# Editors & IDEs
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Tests / coverage / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Databases (dev/local)
+*.db
+*.sqlite
+*.sqlite3
+cortexcam.db
+
+# Node (if any tooling used)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Temp
+/tmp/

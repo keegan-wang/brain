@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CortexCam — Starting…</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <style>
+      .center{display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:12px}
+      .spinner{width:28px;height:28px;border:3px solid #223047;border-top-color:#7aa2f7;border-radius:50%;animation:spin 1s linear infinite}
+      @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
+  </head>
+  <body>
+    <div class="center">
+      <div class="spinner"></div>
+      <div class="mono small" id="msg">Loading models…</div>
+      <button id="go" disabled>Open CortexCam</button>
+    </div>
+    <script>
+      const btn = document.getElementById('go');
+      btn.addEventListener('click', ()=>{ location.href = '/'; });
+
+      async function check(){
+        try{
+          const res = await fetch('/ready');
+          const data = await res.json();
+          if(data && data.ready){
+            btn.disabled = false;
+            btn.textContent = 'Open CortexCam';
+            // Also auto-redirect after a short delay
+            setTimeout(()=>{ if(location.pathname !== '/') location.href = '/'; }, 800);
+            return;
+          }
+          const parts=[]; for(const k of Object.keys(data.status||{})){ parts.push(`${k}:${data.status[k]?'ok':'loading'}`) }
+          document.getElementById('msg').textContent = 'Loading models… ' + parts.join(' ');
+        }catch(e){ document.getElementById('msg').textContent = 'Starting…'; }
+        setTimeout(check, 1500);
+      }
+      check();
+    </script>
+  </body>
+</html>

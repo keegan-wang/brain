@@ -1,0 +1,48 @@
+CortexCam v0.1 — How to Run
+
+Prerequisites
+- Python 3.10+
+- macOS/Linux recommended (tested on macOS)
+
+1) Enter the repo
+- cd /Users/keegan/Documents/GitHub/brain
+
+2) Create and activate a virtual environment
+- python3 -m venv .venv && source .venv/bin/activate
+
+3) Install dependencies
+- pip install -r /Users/keegan/Documents/GitHub/brain/requirements.txt
+
+4) (Optional) Environment variables
+- Option A: export in shell, e.g. `export OPENAI_API_KEY=...`
+- Option B: create a `.env` in repo root with `OPENAI_API_KEY=...` (file not required for stubs)
+
+5) Run the API server
+- uvicorn backend.app.main:app --reload
+- Open http://127.0.0.1:8000/docs for interactive API docs
+
+Quick tests
+A) Analyze scene (stubbed vision -> scene_json)
+- curl -s -X POST http://127.0.0.1:8000/analyze/scene \
+  -H "Content-Type: application/json" \
+  -d '{"device_meta":{"platform":"ios"}}' | jq .
+
+B) Map to cognitive domains (rules baseline)
+- Use the scene_json from (A) as the body here:
+- curl -s -X POST http://127.0.0.1:8000/map/domains \
+  -H "Content-Type: application/json" \
+  -d '{"scene_json": { ... copy from (A) ... }}' | jq .
+
+C) Daily summary (aggregation returns zeros for now)
+- curl -s "http://127.0.0.1:8000/summary/daily?date=$(date +%F)&user_id=demo" | jq .
+
+D) Ingest photo (registers a photo id)
+- curl -s -X POST http://127.0.0.1:8000/ingest/photo \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"demo"}' | jq .
+
+Notes
+- Vision/redaction are placeholders; no external model calls
+- OpenAI path is stubbed; setting OPENAI_API_KEY gates logic but still avoids network in this scaffold
+- SQLite database defaults to ./cortexcam.db and is created automatically on startup
+- Stop server with Ctrl+C; exit venv with: deactivate
