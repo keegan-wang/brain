@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from .db import init_db
@@ -35,6 +35,23 @@ app.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
 
 @app.get("/")
 def root() -> FileResponse:
+    # Gate UI until required models are ready
+    global READINESS
+    if READINESS is None:
+        READINESS = {}
+    if not required_ready(READINESS):
+        return FileResponse("backend/app/static/booting.html")
+    return FileResponse("backend/app/static/index.html")
+
+
+# Catch-all route for React Router (SPA)
+@app.get("/{full_path:path}")
+def serve_spa(full_path: str) -> FileResponse:
+    # Only serve SPA for non-API routes
+    if full_path.startswith(("api/", "docs", "redoc", "openapi.json", "static/", "ws/",
+                           "analyze/", "map/", "summary/", "feedback/", "ingest/", "ready")):
+        raise HTTPException(status_code=404, detail="Not found")
+
     # Gate UI until required models are ready
     global READINESS
     if READINESS is None:

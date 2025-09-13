@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+import logging
+from fastapi import APIRouter, HTTPException
+
+logger = logging.getLogger(__name__)
 
 from ..schemas import MapAllRequest, MapAllResponse
-from ..services.mapping_openai import map_all_with_openai, BRAIN_REGIONS
-from ..services.mapping_rules import rules_domain
+from ..services.mapping_openai import map_with_openai, map_brain_regions_with_openai, BRAIN_REGIONS_LIST
 from ..services.orchestrator import ensure_jpeg_base64
+from ..config import settings
 
 
 router = APIRouter()
@@ -13,39 +16,24 @@ router = APIRouter()
 
 @router.post("", response_model=MapAllResponse)
 def map_all(req: MapAllRequest) -> MapAllResponse:
+    # Fast preflight checks for clearer errors
+    if not settings.OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="Missing OPENAI_API_KEY. Check your .env file in the project root.")
+    model = settings.CORTEXCAM_OPENAI_MODEL
+
     jpeg_b64 = ensure_jpeg_base64(req.image_base64, req.image_mime)
-    result = map_all_with_openai(req.scene_json, jpeg_b64)
-    if result is None:
-        # Fallback domain mapping; derive simple heuristic brain scores from domains
-        mapping = rules_domain(req.scene_json)
-        ds100 = {
-            "VIS": int(mapping.domain_scores.VIS*100),
-            "LAN": int(mapping.domain_scores.LAN*100),
-            "SOC": int(mapping.domain_scores.SOC*100),
-            "MOT": int(mapping.domain_scores.MOT*100),
-            "EXEC": int(mapping.domain_scores.EXEC*100),
-            "REW": int(mapping.domain_scores.REW*100),
-        }
-        brain_scores: dict[str, int] = {}
-        for key in BRAIN_REGIONS:
-            if "visual" in key or key in {"posterior_parietal_cortex"}:
-                brain_scores[key] = max(1, ds100["VIS"])
-            elif key in {"prefrontal_dorsolateral","prefrontal_ventromedial","orbitofrontal_cortex","anterior_cingulate_cortex","frontoparietal_control_network_FPCN"}:
-                brain_scores[key] = max(1, ds100["EXEC"])
-            elif key in {"nucleus_accumbens","amygdala","salience_network"}:
-                brain_scores[key] = max(1, ds100["REW"])
-            elif key in {"superior_temporal_gyrus","medial_temporal_lobe","hippocampus"}:
-                brain_scores[key] = max(1, ds100["LAN"])
-            elif key in {"primary_motor_cortex_M1","premotor_cortex","supplementary_motor_area_SMA","cerebellum"}:
-                brain_scores[key] = max(1, ds100["MOT"])
-            elif key in {"default_mode_network_DMN","posterior_cingulate_cortex"}:
-                brain_scores[key] = max(1, int(0.5*ds100["LAN"] + 0.5*ds100["VIS"]))
-            elif key in {"dorsal_attention_network_DAN","ventral_attention_network_VAN"}:
-                brain_scores[key] = max(1, int(0.7*ds100["VIS"] + 0.3*ds100["EXEC"]))
-            else:
-                brain_scores[key] = 1
-        return MapAllResponse(mapping=mapping, domain_scores_100=ds100, brain_scores_100=brain_scores)
-    mapping, brain = result
+    # Step 1: domain mapping via OpenAI (use image too if available)
+    mapping = map_with_openai(req.scene_json, jpeg_b64)
+    if mapping is None:
+        logger.error(f"OpenAI domain mapping failed for scene '{req.scene_json.caption}' (model={model}, image={'yes' if bool(jpeg_b64) else 'no'}).")
+        raise HTTPException(status_code=502, detail=f"OpenAI domain mapping failed (model={model})")
+
+    # Step 2: brain regions via OpenAI (image + scene context)
+    brain = map_brain_regions_with_openai(req.scene_json, jpeg_b64, req.hours)
+    if brain is None:
+        logger.error(f"OpenAI brain mapping failed for scene '{req.scene_json.caption}' (model={model}).")
+        raise HTTPException(status_code=502, detail=f"OpenAI brain mapping failed (model={model})")
+
     return MapAllResponse(mapping=mapping, domain_scores_100={
         "VIS": int(mapping.domain_scores.VIS*100),
         "LAN": int(mapping.domain_scores.LAN*100),

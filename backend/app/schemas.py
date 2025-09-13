@@ -117,6 +117,7 @@ class MapAllRequest(BaseModel):
     scene_json: SceneJSON
     image_base64: Optional[str] = None
     image_mime: Optional[str] = None
+    hours: Optional[float] = None
 
 
 class MapAllResponse(BaseModel):

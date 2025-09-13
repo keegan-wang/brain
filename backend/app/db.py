@@ -1,9 +1,9 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from .config import settings
 
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./cortexcam.db")
+DATABASE_URL = settings.DATABASE_URL
 
 
 class Base(DeclarativeBase):
