@@ -61,7 +61,7 @@ export default function BrainRegionCard({ region, usageData }: BrainRegionCardPr
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
         <div>
-          <div className="text-dark-100">7-day avg</div>
+          <div className="text-dark-100">Daily avg</div>
           <div className="font-medium text-white">{avgUsage}%</div>
         </div>
         <div>

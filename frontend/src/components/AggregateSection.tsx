@@ -314,18 +314,18 @@ export default function AggregateSection({ onAggregateScores }: AggregateSection
                 >
                   Clear Activities
                 </button>
-                <button
-                  onClick={() => {
-                    if (confirm('This will clear all stored data including activities and aggregated scores. Are you sure?')) {
-                      clearCache();
-                      setStatus('Cache cleared successfully');
-                      setResult(null);
-                    }
-                  }}
-                  className="btn-secondary text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30"
-                >
-                  🗑️ Clear Cache
-                </button>
+                  <button
+                    onClick={() => {
+                      if (confirm('This will clear all stored data including activities and aggregated scores. Are you sure?')) {
+                        clearCache();
+                        setStatus('Cache cleared successfully');
+                        setResult(null);
+                      }
+                    }}
+                    className="btn-secondary text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30"
+                  >
+                    🗑️ Clear Cache
+                  </button>
               </div>
             )}
             <button

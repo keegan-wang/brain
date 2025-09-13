@@ -19,7 +19,7 @@ def calculate_image_hash(image_data: bytes) -> str:
 def get_cached_analysis(db: Session, image_hash: str) -> Optional[Dict[str, Any]]:
     """
     Retrieve cached analysis for an image hash.
-    
+
     Returns:
         Dict with scene_json, brain_scores_100, and mapping_output if found, None otherwise
     """
@@ -27,7 +27,7 @@ def get_cached_analysis(db: Session, image_hash: str) -> Optional[Dict[str, Any]
         cache_entry = db.query(ImageAnalysisCache).filter(
             ImageAnalysisCache.image_hash == image_hash
         ).first()
-        
+
         if cache_entry:
             logger.info(f"Cache HIT for image hash {image_hash[:12]}...")
             return {
@@ -40,7 +40,7 @@ def get_cached_analysis(db: Session, image_hash: str) -> Optional[Dict[str, Any]
         else:
             logger.info(f"Cache MISS for image hash {image_hash[:12]}...")
             return None
-            
+
     except Exception as e:
         logger.error(f"Error retrieving cache for hash {image_hash[:12]}...: {e}")
         return None
@@ -55,7 +55,7 @@ def save_analysis_to_cache(
 ) -> bool:
     """
     Save analysis results to cache.
-    
+
     Returns:
         True if saved successfully, False otherwise
     """
@@ -64,7 +64,7 @@ def save_analysis_to_cache(
         existing = db.query(ImageAnalysisCache).filter(
             ImageAnalysisCache.image_hash == image_hash
         ).first()
-        
+
         if existing:
             # Update existing entry
             existing.scene_json = scene_json
@@ -81,10 +81,10 @@ def save_analysis_to_cache(
             )
             db.add(cache_entry)
             logger.info(f"Saved new cache entry for image hash {image_hash[:12]}...")
-        
+
         db.commit()
         return True
-        
+
     except Exception as e:
         logger.error(f"Error saving cache for hash {image_hash[:12]}...: {e}")
         db.rollback()
@@ -94,10 +94,10 @@ def save_analysis_to_cache(
 def clear_image_cache(db: Session, image_hash: Optional[str] = None) -> int:
     """
     Clear image cache entries.
-    
+
     Args:
         image_hash: If provided, only clear this specific entry. If None, clear all.
-        
+
     Returns:
         Number of entries deleted
     """
@@ -110,10 +110,10 @@ def clear_image_cache(db: Session, image_hash: Optional[str] = None) -> int:
         else:
             deleted = db.query(ImageAnalysisCache).delete()
             logger.info("Cleared entire image analysis cache")
-        
+
         db.commit()
         return deleted
-        
+
     except Exception as e:
         logger.error(f"Error clearing cache: {e}")
         db.rollback()

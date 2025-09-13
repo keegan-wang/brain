@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import BrainRegionCard from './BrainRegionCard';
 import BrainMap from './BrainMap';
 import Brain3D from './Brain3D';
+import MiniChart from './MiniChart';
 import { useActivityStore } from '../hooks/useActivityStore';
 import { BRAIN_REGIONS } from '../data/brainRegions';
 
@@ -26,10 +27,58 @@ export default function HomePage() {
     );
   }, [usageData]);
 
+  // Calculate daily average brain usage - memoized for performance
+  const averageUsage = useMemo(() => {
+    return Object.fromEntries(
+      BRAIN_REGIONS.map(region => {
+        const regionData = usageData[region.id] || [];
+        if (regionData.length === 0) return [region.id, 0];
+
+        const sum = regionData.reduce((acc, dataPoint) => acc + dataPoint.value, 0);
+        const average = sum / regionData.length;
+        return [region.id, average];
+      })
+    );
+  }, [usageData]);
+
   const totalBrainUsage = useMemo(() => {
-    const values = Object.values(overallUsage);
+    const values = Object.values(averageUsage);
     return values.reduce((sum, val) => sum + val, 0) / values.length || 0;
-  }, [overallUsage]);
+  }, [averageUsage]);
+
+  // Calculate overall brain activity over time for the main graph
+  const overallActivityData = useMemo(() => {
+    // Get all unique time points from any region
+    const allTimes = new Set<string>();
+    Object.values(usageData).forEach(regionData => {
+      regionData.forEach(point => allTimes.add(point.time));
+    });
+
+    // Sort times chronologically
+    const sortedTimes = Array.from(allTimes).sort();
+
+    // For each time point, calculate the average across all brain regions
+    return sortedTimes.map(time => {
+      const valuesAtTime: number[] = [];
+
+      BRAIN_REGIONS.forEach(region => {
+        const regionData = usageData[region.id] || [];
+        const dataPoint = regionData.find(d => d.time === time);
+        if (dataPoint) {
+          valuesAtTime.push(dataPoint.value);
+        }
+      });
+
+      const averageValue = valuesAtTime.length > 0
+        ? valuesAtTime.reduce((sum, val) => sum + val, 0) / valuesAtTime.length
+        : 0;
+
+      return {
+        time,
+        value: Math.round(averageValue)
+      };
+    });
+  }, [usageData]);
 
   return (
     <div className="space-y-8">
@@ -105,19 +154,68 @@ export default function HomePage() {
                 <div className="text-3xl font-bold text-brand-500 mb-1">
                   {Math.round(totalBrainUsage)}%
                 </div>
-                <div className="text-sm text-dark-100">Overall Activity</div>
+                <div className="text-sm text-dark-100">Average Daily Activity</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-accent-teal mb-1">
-                  {Object.values(overallUsage).filter(v => v > 60).length}
+                  {Object.values(averageUsage).filter(v => v > 60).length}
                 </div>
                 <div className="text-sm text-dark-100">Highly Active Regions</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-accent-pink mb-1">
-                  {Object.values(overallUsage).filter(v => v < 30).length}
+                  {Object.values(averageUsage).filter(v => v < 30).length}
                 </div>
                 <div className="text-sm text-dark-100">Underutilized Regions</div>
+              </div>
+            </div>
+
+            {/* Overall Brain Activity Graph */}
+            <div className="mb-8">
+              <div className="bg-dark-900/30 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Overall Brain Activity Over Time</h3>
+                  <div className="text-sm text-dark-100">
+                    {timeframe === 'day' ? 'Latest Day' : '7 Days'}
+                  </div>
+                </div>
+
+                {overallActivityData.length > 0 ? (
+                  <div className="h-24">
+                    <MiniChart
+                      data={overallActivityData}
+                      color="#22D3EE"
+                      height={96}
+                    />
+                  </div>
+                ) : (
+                  <div className="h-24 flex items-center justify-center text-dark-100 text-sm">
+                    No activity data available
+                  </div>
+                )}
+
+                <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-dark-100">Current</div>
+                    <div className="font-medium text-white">
+                      {overallActivityData[overallActivityData.length - 1]?.value || 0}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-dark-100">Average</div>
+                    <div className="font-medium text-white">
+                      {Math.round(totalBrainUsage)}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-dark-100">Peak</div>
+                    <div className="font-medium text-white">
+                      {overallActivityData.length > 0
+                        ? Math.max(...overallActivityData.map(d => d.value))
+                        : 0}%
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -192,52 +290,166 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Tips Section */}
-      <div className="card">
-        <h2 className="text-xl font-semibold text-white mb-4">
-          💡 Optimization Tips
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-medium text-accent-teal mb-2">
-              Boost Underutilized Regions
-            </h3>
-            <ul className="space-y-2 text-sm text-dark-100">
-              <li className="flex items-start">
-                <span className="w-1.5 h-1.5 bg-accent-pink rounded-full mt-2 mr-2 flex-shrink-0" />
-                Try memory games to activate your hippocampus
-              </li>
-              <li className="flex items-start">
-                <span className="w-1.5 h-1.5 bg-accent-pink rounded-full mt-2 mr-2 flex-shrink-0" />
-                Practice mindfulness to engage your anterior cingulate
-              </li>
-              <li className="flex items-start">
-                <span className="w-1.5 h-1.5 bg-accent-pink rounded-full mt-2 mr-2 flex-shrink-0" />
-                Learn a new skill to challenge your prefrontal cortex
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-medium text-accent-teal mb-2">
-              Maintain Balance
-            </h3>
-            <ul className="space-y-2 text-sm text-dark-100">
-              <li className="flex items-start">
-                <span className="w-1.5 h-1.5 bg-accent-pink rounded-full mt-2 mr-2 flex-shrink-0" />
-                Mix cognitive and physical activities
-              </li>
-              <li className="flex items-start">
-                <span className="w-1.5 h-1.5 bg-accent-pink rounded-full mt-2 mr-2 flex-shrink-0" />
-                Take breaks to prevent cognitive fatigue
-              </li>
-              <li className="flex items-start">
-                <span className="w-1.5 h-1.5 bg-accent-pink rounded-full mt-2 mr-2 flex-shrink-0" />
-                Vary your daily activities for well-rounded engagement
-              </li>
-            </ul>
+      {/* Brain Usage Overview */}
+      {hasEnoughData && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-white mb-4">
+            🧠 Daily Average Brain Usage
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {(() => {
+              // Calculate top 3 and bottom 3 brain regions based on daily average
+              const sortedRegions = BRAIN_REGIONS
+                .map(region => ({
+                  ...region,
+                  usage: averageUsage[region.id] || 0
+                }))
+                .sort((a, b) => b.usage - a.usage);
+
+              const topRegions = sortedRegions.slice(0, 3);
+              const bottomRegions = sortedRegions.slice(-3).reverse();
+
+              // Activity suggestions for underutilized regions
+              const improvementSuggestions: Record<string, string[]> = {
+                prefrontal_cortex: [
+                  "Try complex problem-solving tasks",
+                  "Practice decision-making exercises",
+                  "Engage in strategic planning activities"
+                ],
+                hippocampus: [
+                  "Play memory games",
+                  "Learn new routes or places",
+                  "Practice recall exercises"
+                ],
+                temporal_lobe: [
+                  "Listen to music actively",
+                  "Practice language learning",
+                  "Engage in auditory processing tasks"
+                ],
+                parietal_lobe: [
+                  "Do spatial puzzles",
+                  "Practice hand-eye coordination",
+                  "Engage in navigation tasks"
+                ],
+                occipital_lobe: [
+                  "Practice visual attention exercises",
+                  "Engage in art or design work",
+                  "Do visual pattern recognition tasks"
+                ],
+                cerebellum: [
+                  "Practice balance exercises",
+                  "Learn dance or movement patterns",
+                  "Engage in fine motor activities"
+                ],
+                brainstem: [
+                  "Practice breathing exercises",
+                  "Maintain regular sleep schedule",
+                  "Engage in cardiovascular activities"
+                ],
+                motor_cortex: [
+                  "Practice fine motor skills",
+                  "Learn new physical movements",
+                  "Engage in hands-on activities"
+                ],
+                somatosensory_cortex: [
+                  "Practice tactile exercises",
+                  "Engage in texture exploration",
+                  "Try mindful touch activities"
+                ],
+                anterior_cingulate: [
+                  "Practice mindfulness meditation",
+                  "Engage in emotional regulation exercises",
+                  "Try attention control tasks"
+                ]
+              };
+
+              return (
+                <>
+                  {/* Most Used Regions */}
+                  <div>
+                    <h3 className="font-medium text-accent-teal mb-4 flex items-center">
+                      <span className="text-lg mr-2">🔥</span>
+                      Most Active Brain Regions
+                    </h3>
+                    <div className="space-y-3">
+                      {topRegions.map((region, index) => (
+                        <div key={region.id} className="flex items-center justify-between p-3 bg-dark-900/50 rounded-lg">
+                          <div className="flex items-center">
+                            <div className="text-lg mr-3">
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                            </div>
+                            <div>
+                              <div className="font-medium text-white">{region.name}</div>
+                              <div className="text-xs text-dark-100">{region.description}</div>
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold text-accent-teal">
+                            {Math.round(region.usage)}%
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <div className="text-green-400 text-sm font-medium mb-1">Great job! 👏</div>
+                      <div className="text-xs text-dark-100">
+                        These regions show consistently high daily average engagement from your activities.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Least Used Regions */}
+                  <div>
+                    <h3 className="font-medium text-accent-pink mb-4 flex items-center">
+                      <span className="text-lg mr-2">💤</span>
+                      Areas for Improvement
+                    </h3>
+                    <div className="space-y-3">
+                      {bottomRegions.map((region, index) => (
+                        <div key={region.id} className="p-3 bg-dark-900/50 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <div className="w-3 h-3 bg-accent-pink rounded-full mr-3"></div>
+                              <div>
+                                <div className="font-medium text-white">{region.name}</div>
+                                <div className="text-xs text-dark-100">{region.description}</div>
+                              </div>
+                            </div>
+                            <div className="text-lg font-bold text-accent-pink">
+                              {Math.round(region.usage)}%
+                            </div>
+                          </div>
+                          {/* Improvement suggestions */}
+                          <div className="mt-2 pl-6">
+                            <div className="text-xs text-dark-100 mb-1">Suggestions to engage this region:</div>
+                            <ul className="text-xs text-dark-100 space-y-1">
+                              {(improvementSuggestions[region.id] || [
+                                "Try activities that challenge this brain area",
+                                "Engage in varied cognitive exercises",
+                                "Consider activities outside your comfort zone"
+                              ]).map((suggestion, idx) => (
+                                <li key={idx} className="flex items-start">
+                                  <span className="w-1 h-1 bg-accent-pink rounded-full mt-1.5 mr-2 flex-shrink-0" />
+                                  {suggestion}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <div className="text-blue-400 text-sm font-medium mb-1">💡 Pro Tip</div>
+                      <div className="text-xs text-dark-100">
+                        These regions show lower daily average usage. Try incorporating activities that target them to achieve better cognitive balance.
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
