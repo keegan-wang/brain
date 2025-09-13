@@ -120,10 +120,18 @@ class MapAllRequest(BaseModel):
     hours: Optional[float] = None
 
 
+class CacheInfo(BaseModel):
+    cached: bool
+    cache_created_at: Optional[str] = None
+    newly_cached: Optional[bool] = None
+    image_hash: Optional[str] = None
+
+
 class MapAllResponse(BaseModel):
     mapping: MappingOutput
     domain_scores_100: dict[str, int]
     brain_scores_100: dict[str, int]
+    cache_info: Optional[CacheInfo] = None
 
 
 class AggregateImageItem(BaseModel):

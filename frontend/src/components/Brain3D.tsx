@@ -325,8 +325,8 @@ export default function Brain3D({ brainData, className = '' }: Brain3DProps) {
 
       // Static scaling based on activity (no pulsing)
       regions.forEach(region => {
-        if (region.mesh && region.activity > 0) {
-          const activityScale = 1 + (region.activity / 100) * 0.15; // Reduced scale effect
+        if (region.mesh) {
+          const activityScale = 1 + (region.activity / 100) * 0.15; // Always scale, even at 0
           region.mesh.scale.setScalar(activityScale);
         }
       });
@@ -378,14 +378,16 @@ export default function Brain3D({ brainData, className = '' }: Brain3DProps) {
         const color = getActivityColor(activity);
 
         if (region.mesh && region.mesh.material instanceof THREE.MeshPhongMaterial) {
-          region.mesh.material.color = color;
-          region.mesh.material.emissive = color.clone().multiplyScalar(activity / 100 * 0.2);
-          region.mesh.material.opacity = 0.7 + (activity / 100) * 0.2;
+          const baseColor = activity === 0 ? new THREE.Color(0x888888) : color;
+          region.mesh.material.color = baseColor;
+          region.mesh.material.emissive = activity === 0 ? new THREE.Color(0x000000) : color.clone().multiplyScalar(activity / 100 * 0.2);
+          region.mesh.material.opacity = activity === 0 ? 0.3 : (0.7 + (activity / 100) * 0.2);
           region.mesh.userData.activity = activity;
         } else if (region.mesh && region.mesh.material instanceof THREE.MeshBasicMaterial) {
           // Network regions
-          region.mesh.material.color = color.clone().multiplyScalar(1.2);
-          region.mesh.material.opacity = 0.5 + (activity / 100) * 0.3;
+          const baseColor = activity === 0 ? new THREE.Color(0x666666) : color.clone().multiplyScalar(1.2);
+          region.mesh.material.color = baseColor;
+          region.mesh.material.opacity = activity === 0 ? 0.2 : (0.5 + (activity / 100) * 0.3);
           region.mesh.userData.activity = activity;
         }
 

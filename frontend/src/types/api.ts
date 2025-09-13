@@ -57,10 +57,18 @@ export interface MappingOutput {
   rationale: string;
 }
 
+export interface CacheInfo {
+  cached: boolean;
+  cache_created_at?: string;
+  newly_cached?: boolean;
+  image_hash?: string;
+}
+
 export interface MapAllResponse {
   mapping: MappingOutput;
   domain_scores_100: Record<string, number>;
   brain_scores_100: Record<string, number>;
+  cache_info?: CacheInfo;
 }
 
 export interface AggregateBrainResponse {
